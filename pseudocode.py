@@ -1,12 +1,15 @@
 # Pseudocode for testing phylogenetic methods
 # based on the 4 taxon case to start with...
 
+# Phillipe et al refers to: 
+# http://bmcevolbiol.biomedcentral.com/articles/10.1186/1471-2148-5-50
+
 ########################### Simulation ##############################
 
 # 1. Define a parameter space where we know traditional methods don't
-#    always get the right answer. This we can get from Phillipe's ms
+#    always get the right answer. This we can get from Phillipe et al
 #    This should include: p, q, r, w, t, and alignment_length
-#    
+#    in their notation
 
 # 2. Write a generator to produce a simulated alignment given 
 #    p, q, r, w, t, alignment_length, an unrooted tree of 4 taxa.
