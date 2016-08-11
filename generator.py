@@ -10,52 +10,89 @@ from cogent.evolve import substitution_model
 from cogent.parse.tree import DndParser
 from cogent.seqsim.tree import RangeNode
 from cogent import LoadTree
-
-# parameters correspond to figure 2 of Phillipe et al 2005: BMC Evo Bio 5:50
-p = 1
-q = 0.1 
-t = 0.5 # the 'amount of heterotachy', 0 = none, 1 = a lot
-r = 0.1 # the internal branch
-w = 0.5 # amount of data from each tree. Phillipe et al always have w = 0.5
-
-# define our alignment lengths according to w
-# NB phillippe et al use an alignment length of 10000
-total_alignment_length = 10000
-t1_length = int(round(total_alignment_length * w))
-t2_length = total_alignment_length - t1_length
-
-# these are the branch lengths of our two trees, see fig 2 of Phillipe et al
-t1_bl1 = (1 + t) * p
-t1_bl2 = (1 - t) * q
-t2_bl1 = (1 - t) * p
-t2_bl2 = (1 + t) * q
-
-# build our trees
-# we use r/2 so we can root the tree and define where evolution begins,
-# the inference will work on unrooted trees though.
-# Note that here we assume the tree structure is ((a,b),(c,d))
-# we will presumably have to randomise this to train an AI, otherwise
-# it's a very simple problem!
-t1_string = '((a:%f, b:%f):%f,(c:%f,d:%f):%f)root;' %(t1_bl1, t1_bl2, r/2, t1_bl1, t1_bl2, r/2)
-t2_string = '((a:%f, b:%f):%f,(c:%f,d:%f):%f)root;' %(t2_bl1, t2_bl2, r/2, t2_bl1, t2_bl2, r/2)
-
-t1 = LoadTree(treestring = t1_string)
-t2 = LoadTree(treestring = t2_string)
-
-# simulte our two alignments using a Jukes Cantor model
-# this assumes that all state frequences are equal at 0.25, and 
-# that transition rates are also equal (e.g. A<->T == C<->G etc)
-
-sm = substitution_model.Nucleotide()
-
-lf1 = sm.makeLikelihoodFunction(t1)
-lf1.setConstantLengths()
-aln1 = lf1.simulateAlignment(sequence_length = t1_length)
-
-lf2 = sm.makeLikelihoodFunction(t2)
-lf2.setConstantLengths()
-aln2 = lf2.simulateAlignment(sequence_length = t2_length)
+import random
 
 
-# now we just join together our two alignments
-aln = aln1 + aln2
+
+def simulate_alignment(p, q, r, s, t, tree = 'random'):
+	'''
+	A function to simulate alignments based on Philippe et al 2005
+	http://bmcevolbiol.biomedcentral.com/articles/10.1186/1471-2148-5-50
+
+	Input variables
+
+	p: branch length p in figure 2b (long branch)
+	q: branch length q in figure 2b (short branch)
+	r: branch length r in figure 2b (internal branch)
+	s: length of alignment (s is for sites)
+	t: tau in figure 2b. Amount of heterotachy [0, 1] = [none, lots]
+	w: omega in Philippe et al, relative weight of partitions
+	tree: ['random', 'fixed']
+		  'random': choose a random 4 taxon tree
+		  'fixed': use the tree ((a,b),(c,d))
+
+	Output
+
+	A PyCogent alignment
+	A PyCogent tree which is the true tree with true branch lengths
+
+	'''
+
+	# relative weight of two trees
+	# must be 0.5 to get the branch lengths averaging nicely
+	w = 0.5 
+
+	# Define our alignment lengths according to s and w
+	t1_length = int(round(s * w))
+	t2_length = s - t1_length
+
+	# Define the branch lengths of the two trees
+	t1_bl1 = (1 + t) * p
+	t1_bl2 = (1 - t) * q
+	t2_bl1 = (1 - t) * p
+	t2_bl2 = (1 + t) * q
+
+	# choose a tree from all possible unrooted 4 taxon trees
+	all_trees = ['((a:%f, b:%f):%f,(c:%f,d:%f));',
+				 '((a:%f, c:%f):%f,(b:%f,d:%f));',
+				 '((a:%f, d:%f):%f,(b:%f,c:%f));'
+				]
+	if tree == 'random':
+		tree_string = random.choice(all_trees)
+	elif tree == 'fixed':
+		tree_string = all_trees[0]
+	else:
+		raise ValueError('Unrecognised option for "tree". Check')
+
+	# the true tree has branch lengths p and q as long as w = 0.5
+	true_tree_bl = tree_string %(p, q, r, p, q)
+	true_tree = LoadTree(treestring = true_tree_bl)
+
+	# build our two trees
+	t1 = build_tree(tree_string, t1_bl1, t1_bl2, r)
+	t2 = build_tree(tree_string, t2_bl1, t2_bl2, r)
+
+	# simulate the alignments
+	a1 = get_alignment(t1, t1_length)
+	a2 = get_alignment(t2, t2_length)
+
+	aln = a1 + a2
+
+	return(aln, true_tree)
+
+
+def build_tree(tree_string, bl1, bl2, r):
+	'build a PyCogent tree object from a string and branch lengths'
+	tree_string_bl = tree_string %(bl1, bl2, r, bl1, bl2)
+	t = LoadTree(treestring = tree_string_bl)
+	return t
+
+def get_alignment(tree, N_sites):
+	'build a PyCogent alignment object from a tree and length'
+	sm = substitution_model.Nucleotide()
+	lf = sm.makeLikelihoodFunction(tree)
+	lf.setConstantLengths()
+	aln = lf.simulateAlignment(sequence_length = N_sites)
+	return(aln)
+
+
