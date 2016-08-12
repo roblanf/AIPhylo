@@ -58,7 +58,7 @@ ml4(aln, tree)
 ```
 
 # A quick test
-In Phillipe et al figure 3, the suggestion is that when p = 0.675, q = 0.15, and t = 0.9, the BL50 is ~0.20. We can roughly test this by simulating a set of datasets with r = 0.175 and seeing if we get roughly 50% of datatsets where the ML tree is the true tree, and 50% where it isn't.
+In Phillipe et al figure 3, the suggestion is that when p = 0.675, q = 0.15, and t = 0.9, the BL50 is ~0.20. We can roughly test this by simulating a set of datasets with r = 0.2 and seeing if we get roughly 50% of datatsets where the ML tree is the true tree, and 50% where it isn't.
 
 ```
 input = [simulate_alignment(0.675, 0.15, 0.2, 10000, 0.9, 'random') for _ in range(20)]
