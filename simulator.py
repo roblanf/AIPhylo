@@ -7,10 +7,9 @@
 
 from cogent.core import alignment, tree
 from cogent.evolve import substitution_model
-from cogent.parse.tree import DndParser
-from cogent.seqsim.tree import RangeNode
 from cogent import LoadTree
 import random
+from cogent.evolve.models import JC69
 
 
 
@@ -53,9 +52,9 @@ def simulate_alignment(p, q, r, s, t, tree = 'random'):
 	t2_bl2 = (1 + t) * q
 
 	# choose a tree from all possible unrooted 4 taxon trees
-	all_trees = ['((a:%f, b:%f):%f,(c:%f,d:%f));',
-				 '((a:%f, c:%f):%f,(b:%f,d:%f));',
-				 '((a:%f, d:%f):%f,(b:%f,c:%f));'
+	all_trees = ['((a:%f, b:%f):%f,(c:%f,d:%f):%f);',
+				 '((a:%f, c:%f):%f,(b:%f,d:%f):%f);',
+				 '((a:%f, d:%f):%f,(b:%f,c:%f):%f);'
 				]
 	if tree == 'random':
 		tree_string = random.choice(all_trees)
@@ -65,7 +64,7 @@ def simulate_alignment(p, q, r, s, t, tree = 'random'):
 		raise ValueError('Unrecognised option for "tree". Check')
 
 	# the true tree has branch lengths p and q as long as w = 0.5
-	true_tree_bl = tree_string %(p, q, r, p, q)
+	true_tree_bl = tree_string %(p, q, r/2.0, p, q, r/2.0)
 	true_tree = LoadTree(treestring = true_tree_bl)
 
 	# build our two trees
@@ -83,13 +82,16 @@ def simulate_alignment(p, q, r, s, t, tree = 'random'):
 
 def build_tree(tree_string, bl1, bl2, r):
 	'build a PyCogent tree object from a string and branch lengths'
-	tree_string_bl = tree_string %(bl1, bl2, r, bl1, bl2)
+	# we use r/2.0 because PyCogent defaults to adding a branch of 
+	# length 1 if you don't explicitly specify it
+	# having 2 branches of r/2.0 keeps our internal branch at r
+	tree_string_bl = tree_string %(bl1, bl2, r/2.0, bl1, bl2, r/2.0)
 	t = LoadTree(treestring = tree_string_bl)
 	return t
 
 def get_alignment(tree, N_sites):
 	'build a PyCogent alignment object from a tree and length'
-	sm = substitution_model.Nucleotide()
+	sm = JC69()
 	lf = sm.makeLikelihoodFunction(tree)
 	lf.setConstantLengths()
 	aln = lf.simulateAlignment(sequence_length = N_sites)
